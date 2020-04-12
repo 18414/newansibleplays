@@ -1,0 +1,64 @@
+---
+- hosts: all
+  become: true
+  tasks: 
+    - name: Install Python3 dependant packages
+      yum: 
+        name: "{{ item }}"
+        state: installed
+      with_items: 
+        - gcc
+        - openssl-devel
+        - bzip2-devel
+   
+    - name: Download Python3 
+      get_url: 
+        url: https://www.python.org/ftp/python/3.7.2/Python-3.7.2.tgz
+        dest: /tmp
+      
+    - name: Check /usr/src/python3 exist status
+      stat: 
+        path: /usr/src/python3
+      register: dirstat
+  
+    - name: Create python3 directory if not exist
+      file: 
+        name: /usr/src/python3
+        state: directory
+      when: dirstat.stat.exists == False 
+
+    - name: Extract tar file
+      unarchive: 
+        src: /tmp/Python-3.7.2.tgz
+        dest: /usr/src/python3
+        extra_opts: [--strip-components=1]
+        remote_src: true
+    - name: Execute commands 
+      shell: ./configure
+      args: 
+        chdir: /usr/src/python3
+     
+    - name: Compile Python 
+      shell: "{{ item }}"
+      args: 
+        chdir: /usr/src/python3
+      with_items: 
+        - /usr/bin/make 
+        - /usr/bin/make install 
+
+    - name: make an entry into bashrc file
+      lineinfile: 
+        line: "alias python='/usr/local/bin/python3'"
+        path: "/root/.bashrc"
+      
+
+    - name: Run source
+      shell: "source /root/.bashrc"
+         
+    
+    - name: Create softlink
+      file: 
+        src: /usr/local/bin/python3
+        dest: /usr/local/bin/python3.7.2
+        state: link
+       
